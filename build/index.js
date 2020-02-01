@@ -1,0 +1,1 @@
+// Dummy entry point for prerender build via webpack.

@@ -1,0 +1,12 @@
+{
+    "scripts": {
+        "prerender": "node ./build/prerender",
+        "sitemap": "node ./build/sitemap",
+        "rss": "node ./build/rss"
+    },
+    "devDependencies": {
+        "prerender-spa-plugin": "3.4.0",
+        "webpack": "4.41.2",
+        "webpack-cli": "3.3.10"
+    }
+}
