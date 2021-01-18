@@ -1,12 +1,25 @@
 {
-    "scripts": {
-        "prerender": "node ./build/prerender",
-        "sitemap": "node ./build/sitemap",
-        "rss": "node ./build/rss"
+    "name": "@websanova/js-prerender",
+    "version": "0.2.0",
+    "description": "Prerender scripts for SEO, Sitemap and RSS single page apps.",
+    "keywords": ["websanova", "vue", "vuejs", "js", "javascript"],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/websanova/js-prerender"
     },
+    "author": {
+        "name" : "Websanova"
+    },
+    "homepage" : "http://url.websanova.com",
+    "license": "MIT, GPL",
     "devDependencies": {
         "prerender-spa-plugin": "3.4.0",
         "webpack": "4.41.2",
         "webpack-cli": "3.3.10"
+    },
+    "scripts": {
+        "prerender": "node ./build/prerender",
+        "sitemap": "node ./build/sitemap",
+        "rss": "node ./build/rss"
     }
 }

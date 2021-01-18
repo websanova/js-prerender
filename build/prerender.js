@@ -10,37 +10,61 @@ const exec   = util.promisify(require('child_process').exec);
 
 const PrerenderSPAPlugin = require('prerender-spa-plugin');
 
-// Prep env
-const root = path.resolve('');
-const env  = argv.mode || 'production';
+// Config
+const env        = argv.mode || 'production';
+const configPath = argv.config || 'prerender.config.js';
 
 dotenv.config({
     path: path.resolve('.env' + (env ? '.' + env : ''))
 });
 
-// Prep config
-let config = require(path.resolve('prerender.config.js'));
+// Config presets
+let config      = require(path.resolve(configPath));
+let Renderer    = PrerenderSPAPlugin.PuppeteerRenderer;
+let postProcess = config.postProcess;
+
+config.staticDir = path.resolve(config.staticDir || 'dist');
+config.outputDir = path.resolve(config.outputDir || 'prerender');
+config.copyDir   = config.copyDir || ['css', 'img'];
+
+config.minify = Object.assign({
+    collapseWhitespace: true
+}, config.minify || {});
+
+config.renderer =  new Renderer(Object.assign({
+    headless: true,
+    renderAfterTime: 5000,
+    maxConcurrentRoutes: 10,
+    // renderAfterElementExists: 'page-loaded'
+    // renderAfterDocumentEvent: 'prender-trigger',
+}, config.renderer || {}));
+
+
+config.postProcess = function(renderedRoute) {
+
+    // Remove all js links.
+    renderedRoute.html = renderedRoute.html.replace(/\/js\/.*?\.js/g, '');
+
+    // Run anything else from config.
+    if (postProcess) {
+        renderedRoute = postProcess(renderedRoute);
+    }
+
+    return renderedRoute;
+};
 
 //
 async function start(config) {
     
-    let indexExists = false;
-    let indexPath = config.indexDir || path.resolve('build/index.js');
+    // Create temp index required for webpack.
+    
+    let indexPath = path.resolve('index-prerender-temp.js');
 
     await new Promise((resolve) => {
-        if (fs.existsSync(indexPath)) {
-            indexExists = true;
-        }
-
-        resolve();
+        fs.writeFile(indexPath, '', () => {
+            resolve();
+        });
     });
-
-    if (!indexExists) {
-        console.log('> Error: ' + indexPath + ' does not exist.');
-        console.log('');
-
-        return;
-    }
 
     // Fetch Dynamic Routes
 
@@ -59,7 +83,9 @@ async function start(config) {
             
             console.log( '  - ' + config.dynamicRoutes[i].url);
 
-            cmd.get(config.dynamicRoutes[i].url, (res) => {
+            cmd.get(config.dynamicRoutes[i].url, {
+                rejectUnauthorized: false
+            }, (res) => {
                 let data = '';
 
                 res.on('data', (chunk) => { data += chunk; });
@@ -99,21 +125,33 @@ async function start(config) {
         prerender.apply(wp);
     });
 
+    await new Promise((resolve) => {
+        fs.unlink(indexPath, () => {
+            resolve();
+        });
+    });
+
     // Reset css directory.
 
     console.log('');
-    console.log('> Reset css directory');
+    console.log('> Copy directories');
 
-    await exec('rm -rf ' + root + '/prerender/css');
-    await exec('rm -rf ' + root + '/prerender/img');
+    for (i = 0, ii = config.copyDir.length; i < ii; i++) {
+        console.log('  - ' + config.staticDir + '/' + config.copyDir[i]);
 
-    await exec('cp -r ' + root + '/dist/css ' + root + '/prerender/css');
-    await exec('cp -r ' + root + '/dist/img ' + root + '/prerender/img');
+        await exec('rm -rf ' + config.outputDir + '/' + config.copyDir[i]);
+        
+        await exec(
+            'rsync -av --ignore-missing-args ' +
+            config.staticDir + '/' + config.copyDir[i] + ' ' +
+            config.outputDir
+        );
+    }
 
     // Done
 
     console.log('');
-    console.log('> You are awesome!');
+    console.log('> Happy happy, joy joy!');
     console.log('');
 };
 

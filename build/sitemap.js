@@ -5,16 +5,15 @@ const dotenv = require('dotenv');
 const http   = require('http');
 const https  = require('https');
 
-// Prep env
-const root = path.resolve('');
-const env  = argv.mode || 'production';
+// Config
+const env        = argv.mode || 'production';
+const configPath = argv.config || 'sitemap.config.js';
 
 dotenv.config({
     path: path.resolve('.env' + (env ? '.' + env : ''))
 });
 
-// Prep config
-let config = require(path.resolve('sitemap.config.js'));
+let config = require(path.resolve(configPath));
 
 // 
 async function start(config) {
@@ -36,7 +35,9 @@ async function start(config) {
             
             console.log( '  - ' + config.dynamicMeta[i].url);
 
-            cmd.get(config.dynamicMeta[i].url, (res) => {
+            cmd.get(config.dynamicMeta[i].url, {
+                rejectUnauthorized: false
+            }, (res) => {
                 let data = '';
 
                 res.on('data', (chunk) => { data += chunk; });
@@ -60,9 +61,9 @@ async function start(config) {
     console.log('  - generating xml');
 
     let date;
-
     let contents = "";
-                
+    let outputFile = path.resolve(config.outputFile || 'dist/sitemap.xml');
+
     contents += "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
     contents += "<urlset\n";
     contents += "    xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\n";
@@ -90,10 +91,10 @@ async function start(config) {
 
     contents += "</urlset>";
 
-    console.log('  - writing ' + config.outputDir + '/sitemap.xml');
+    console.log('  - writing ' + outputFile);
 
     await new Promise((resolve) => {
-        fs.writeFile(config.outputDir + '/sitemap.xml', contents, () => {
+        fs.writeFile(outputFile, contents, () => {
             resolve();
         });
     });
@@ -101,7 +102,7 @@ async function start(config) {
     // Done
 
     console.log('');
-    console.log('> You are awesome!');
+    console.log('> Happy happy, joy joy!');
     console.log('');
 };
 
